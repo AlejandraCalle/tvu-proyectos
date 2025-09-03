@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: mediafinderdb
+    restart: always
+    environment:
+      POSTGRES_USER: mishel
+      POSTGRES_PASSWORD: mediatvu735
+      POSTGRES_DB: mediafinder
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: adminmishel@admin.com
+      PGADMIN_DEFAULT_PASSWORD: adminmishel735
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+volumes:
+  postgres_data:
