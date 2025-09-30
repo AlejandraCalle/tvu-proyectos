@@ -5,6 +5,7 @@ import { UsuariosModule } from '../usuarios/usuarios.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
+import { AuditoriaModule } from 'src/auditoria/auditoria.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { JwtStrategy } from './jwt.strategy';
       secret: process.env.JWT_SECRET || 'supersecretkey',
       signOptions: { expiresIn: '1h' }, // token válido 1 hora
     }),
+    AuditoriaModule
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

@@ -1,16 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Put } from '@nestjs/common';
 import { UsuariosService } from './usuarios.service';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
 import { PermisosGuard } from 'src/auth/permisos.guard';
 import { Permisos } from 'src/auth/permisos.decorator';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/auth/roles.decorator';
 
 @Controller('usuarios')
 export class UsuariosController {
-  constructor(private readonly usuariosService: UsuariosService) {}
+  constructor(private readonly usuariosService: UsuariosService) { }
+
+  // Endpoint para obtener info del usuario logueado
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getProfile(@Req() req: any) {
+    return this.usuariosService.getProfile(req.user.id_usuario);
+  }
 
   @UseGuards(JwtAuthGuard, PermisosGuard)
   @Permisos('CREAR_USUARIO')
@@ -40,10 +47,26 @@ export class UsuariosController {
     return this.usuariosService.update(+id, updateUsuarioDto, req.user.id_usuario);
   }
 
+  @Put(':id/reset-password')
+  @UseGuards(JwtAuthGuard, PermisosGuard, RolesGuard)
+  @Permisos('ACTUALIZAR_USUARIO')
+  @Roles('Administrador')
+  async resetPassword(@Param('id') id: string) {
+    const newPass = await this.usuariosService.resetPassword(Number(id));
+    return { nueva_contraseña: newPass };
+  }
+  
   @UseGuards(JwtAuthGuard, PermisosGuard)
   @Permisos('ELIMINAR_USUARIO')
-  @Delete(':id')
-  remove(@Param('id') id: string, @Req() req: any) {
-    return this.usuariosService.remove(+id, req.user.id_usuario);
+  @Patch(':id/soft-delete')
+  softDelete(@Param('id') id: number, @Req() req) {
+    return this.usuariosService.softDelete(Number(id), req.user.id_usuario);
+  }
+
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('ELIMINAR_USUARIO')
+  @Delete(':id/hard-delete')
+  hardDelete(@Param('id') id: number, @Req() req) {
+    return this.usuariosService.hardDelete(Number(id), req.user.id_usuario);
   }
 }

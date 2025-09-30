@@ -7,6 +7,7 @@ CREATE TABLE "public"."Usuario" (
     "contraseña" TEXT NOT NULL,
     "estado" BOOLEAN NOT NULL,
     "id_rol" INTEGER NOT NULL,
+    "id_productor" INTEGER,
 
     CONSTRAINT "Usuario_pkey" PRIMARY KEY ("id_usuario")
 );
@@ -16,6 +17,7 @@ CREATE TABLE "public"."Rol" (
     "id_rol" SERIAL NOT NULL,
     "nombre_rol" TEXT NOT NULL,
     "descripcion" TEXT,
+    "estado" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "Rol_pkey" PRIMARY KEY ("id_rol")
 );
@@ -39,12 +41,14 @@ CREATE TABLE "public"."Rol_Permiso" (
 
 -- CreateTable
 CREATE TABLE "public"."AsignacionRolPermiso" (
+    "id_asignacion" SERIAL NOT NULL,
     "id_rol" INTEGER NOT NULL,
     "id_permiso" INTEGER NOT NULL,
-    "fecha_asignacion" TIMESTAMP(3) NOT NULL,
     "asignado_por" INTEGER NOT NULL,
+    "fecha_asignacion" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "accion" VARCHAR(10) NOT NULL,
 
-    CONSTRAINT "AsignacionRolPermiso_pkey" PRIMARY KEY ("id_rol","id_permiso","asignado_por")
+    CONSTRAINT "AsignacionRolPermiso_pkey" PRIMARY KEY ("id_asignacion")
 );
 
 -- CreateTable
@@ -122,7 +126,7 @@ CREATE TABLE "public"."Video" (
     "código_único" TEXT NOT NULL,
     "titulo" TEXT NOT NULL,
     "descripcion" TEXT,
-    "fecha_creación" TIMESTAMP(3) NOT NULL,
+    "fecha_creación" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "id_productor" INTEGER NOT NULL,
     "id_categoria" INTEGER NOT NULL,
 
@@ -151,10 +155,19 @@ CREATE TABLE "public"."Categoria" (
 CREATE UNIQUE INDEX "Usuario_correo_key" ON "public"."Usuario"("correo");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "TipoAccion_nombre_accion_key" ON "public"."TipoAccion"("nombre_accion");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TipoCambio_nombre_cambio_key" ON "public"."TipoCambio"("nombre_cambio");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Video_código_único_key" ON "public"."Video"("código_único");
 
 -- AddForeignKey
 ALTER TABLE "public"."Usuario" ADD CONSTRAINT "Usuario_id_rol_fkey" FOREIGN KEY ("id_rol") REFERENCES "public"."Rol"("id_rol") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Usuario" ADD CONSTRAINT "Usuario_id_productor_fkey" FOREIGN KEY ("id_productor") REFERENCES "public"."Productor"("id_productor") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Rol_Permiso" ADD CONSTRAINT "Rol_Permiso_id_rol_fkey" FOREIGN KEY ("id_rol") REFERENCES "public"."Rol"("id_rol") ON DELETE RESTRICT ON UPDATE CASCADE;

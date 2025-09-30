@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,37 +8,38 @@ datasource db {
 }
 
 model Usuario {
-  id_usuario   Int      @id @default(autoincrement())
-  nombre       String
-  apellido     String
-  correo       String   @unique
-  contraseña   String
-  estado       Boolean
-  id_rol       Int
-  rol          Rol      @relation(fields: [id_rol], references: [id_rol])
-  registroAcciones RegistroAcciones[]
-  historialCambios  HistorialCambios[]
-  asignacionesRolPermiso  AsignacionRolPermiso[]
+  id_usuario                Int                       @id @default(autoincrement())
+  nombre                    String
+  apellido                  String
+  correo                    String                    @unique
+  contraseña               String
+  estado                    Boolean
+  id_rol                    Int
+  rol                       Rol                       @relation(fields: [id_rol], references: [id_rol])
+  registroAcciones          RegistroAcciones[]
+  historialCambios          HistorialCambios[]
+  asignacionesRolPermiso    AsignacionRolPermiso[]
   asignacionesVideoEtiqueta AsignacionVideoEtiqueta[]
-  id_productor Int?       // <-- relación opcional
-  productor    Productor? @relation("UsuarioProductor", fields: [id_productor], references: [id_productor])
+  id_productor              Int? // <-- relación opcional
+  productor                 Productor?                @relation("UsuarioProductor", fields: [id_productor], references: [id_productor])
 }
 
 model Rol {
-  id_rol       Int      @id @default(autoincrement())
-  nombre_rol   String
-  descripcion  String?
-  usuarios     Usuario[]
+  id_rol                 Int     @id @default(autoincrement())
+  nombre_rol             String
+  descripcion            String?
+  estado                 Boolean @default(true)
+  usuarios               Usuario[]
   asignacionesRolPermiso AsignacionRolPermiso[]
-  rolPermisos  Rol_Permiso[]
+  rolPermisos            Rol_Permiso[]
 }
 
 model Permiso {
-  id_permiso   Int      @id @default(autoincrement())
-  nombre_permiso String
-  descripcion  String?
+  id_permiso             Int                    @id @default(autoincrement())
+  nombre_permiso         String
+  descripcion            String?
   asignacionesRolPermiso AsignacionRolPermiso[]
-  rolPermisos   Rol_Permiso[]
+  rolPermisos            Rol_Permiso[]
 }
 
 model Rol_Permiso {
@@ -48,113 +48,115 @@ model Rol_Permiso {
   rol        Rol     @relation(fields: [id_rol], references: [id_rol])
   permiso    Permiso @relation(fields: [id_permiso], references: [id_permiso])
 
-  @@id([id_rol, id_permiso])
+  @@id([id_rol, id_permiso]) // relación actual única por rol-permiso
 }
 
 model AsignacionRolPermiso {
-  id_rol         Int
-  id_permiso     Int
-  fecha_asignacion DateTime
-  asignado_por   Int
-  rol            Rol     @relation(fields: [id_rol], references: [id_rol])
-  permiso        Permiso @relation(fields: [id_permiso], references: [id_permiso])
-  asignador      Usuario @relation(fields: [asignado_por], references: [id_usuario])
+  id_asignacion    Int      @id @default(autoincrement())
+  id_rol           Int
+  id_permiso       Int
+  asignado_por     Int
+  fecha_asignacion DateTime @default(now())
+  accion           String   @db.VarChar(10) // ASIGNAR o QUITAR
 
-  @@id([id_rol, id_permiso, asignado_por])
+  rol      Rol      @relation(fields: [id_rol], references: [id_rol])
+  permiso  Permiso  @relation(fields: [id_permiso], references: [id_permiso])
+  usuario  Usuario  @relation(fields: [asignado_por], references: [id_usuario])
 }
 
+
 model RegistroAcciones {
-  id_accion    Int         @id @default(autoincrement())
-  id_usuario   Int
-  id_tipo_accion Int
+  id_accion        Int        @id @default(autoincrement())
+  id_usuario       Int
+  id_tipo_accion   Int
   entidad_afectada String
-  id_entidad   Int
-  fecha_accion DateTime
-  usuario      Usuario     @relation(fields: [id_usuario], references: [id_usuario])
-  tipoAccion   TipoAccion  @relation(fields: [id_tipo_accion], references: [id_tipo_accion])
+  id_entidad       Int
+  fecha_accion     DateTime
+  usuario          Usuario    @relation(fields: [id_usuario], references: [id_usuario])
+  tipoAccion       TipoAccion @relation(fields: [id_tipo_accion], references: [id_tipo_accion])
 }
 
 model TipoAccion {
-  id_tipo_accion Int @id @default(autoincrement())
-  nombre_accion  String @unique
-  descripcion    String?
+  id_tipo_accion   Int                @id @default(autoincrement())
+  nombre_accion    String             @unique
+  descripcion      String?
   registroAcciones RegistroAcciones[]
 }
 
 model HistorialCambios {
-  id_historial   Int     @id @default(autoincrement())
+  id_historial   Int        @id @default(autoincrement())
   id_video       Int
   id_usuario     Int
   id_tipo_cambio Int
   fecha_cambio   DateTime
   detalle_cambio String
-  video          Video    @relation(fields: [id_video], references: [id_video])
-  usuario        Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  video          Video      @relation(fields: [id_video], references: [id_video])
+  usuario        Usuario    @relation(fields: [id_usuario], references: [id_usuario])
   tipoCambio     TipoCambio @relation(fields: [id_tipo_cambio], references: [id_tipo_cambio])
 }
 
 model TipoCambio {
-  id_tipo_cambio Int @id @default(autoincrement())
-  nombre_cambio  String @unique
-  descripcion    String?
+  id_tipo_cambio   Int                @id @default(autoincrement())
+  nombre_cambio    String             @unique
+  descripcion      String?
   historialCambios HistorialCambios[]
 }
 
 model Etiqueta {
-  id_etiqueta     Int     @id @default(autoincrement())
+  id_etiqueta     Int                       @id @default(autoincrement())
   nombre_etiqueta String
   asignaciones    AsignacionVideoEtiqueta[]
   videoEtiquetas  Video_Etiqueta[]
 }
 
 model AsignacionVideoEtiqueta {
-  id_video      Int
-  id_etiqueta   Int
+  id_video         Int
+  id_etiqueta      Int
   fecha_asignacion DateTime
-  asignado_por  Int
-  video         Video   @relation(fields: [id_video], references: [id_video])
-  etiqueta      Etiqueta @relation(fields: [id_etiqueta], references: [id_etiqueta])
-  asignador     Usuario  @relation(fields: [asignado_por], references: [id_usuario])
+  asignado_por     Int
+  video            Video    @relation(fields: [id_video], references: [id_video])
+  etiqueta         Etiqueta @relation(fields: [id_etiqueta], references: [id_etiqueta])
+  asignador        Usuario  @relation(fields: [asignado_por], references: [id_usuario])
 
   @@id([id_video, id_etiqueta, asignado_por])
 }
 
 model Video_Etiqueta {
-  id_video      Int
-  id_etiqueta   Int
+  id_video         Int
+  id_etiqueta      Int
   fecha_asignacion DateTime
-  video         Video   @relation(fields: [id_video], references: [id_video])
-  etiqueta      Etiqueta @relation(fields: [id_etiqueta], references: [id_etiqueta])
+  video            Video    @relation(fields: [id_video], references: [id_video])
+  etiqueta         Etiqueta @relation(fields: [id_etiqueta], references: [id_etiqueta])
 
   @@id([id_video, id_etiqueta])
 }
 
 model Video {
-  id_video     Int     @id @default(autoincrement())
-  código_único String  @unique
-  titulo       String
-  descripcion  String?
-  fecha_creación DateTime @default(now())
-  id_productor Int
-  id_categoria Int
-  productor    Productor @relation(fields: [id_productor], references: [id_productor])
-  categoria    Categoria @relation(fields: [id_categoria], references: [id_categoria])
+  id_video         Int                       @id @default(autoincrement())
+  código_único   String                    @unique
+  titulo           String
+  descripcion      String?
+  fecha_creación  DateTime                  @default(now())
+  id_productor     Int
+  id_categoria     Int
+  productor        Productor                 @relation(fields: [id_productor], references: [id_productor])
+  categoria        Categoria                 @relation(fields: [id_categoria], references: [id_categoria])
   historialCambios HistorialCambios[]
-  asignaciones  AsignacionVideoEtiqueta[]
-  videoEtiquetas Video_Etiqueta[]
+  asignaciones     AsignacionVideoEtiqueta[]
+  videoEtiquetas   Video_Etiqueta[]
 }
 
 model Productor {
-  id_productor   Int     @id @default(autoincrement())
+  id_productor     Int       @id @default(autoincrement())
   nombre_productor String
-  contacto       String?
-  videos         Video[]
-  usuarios       Usuario[] @relation("UsuarioProductor")
+  contacto         String?
+  videos           Video[]
+  usuarios         Usuario[] @relation("UsuarioProductor")
 }
 
 model Categoria {
-  id_categoria   Int     @id @default(autoincrement())
+  id_categoria     Int     @id @default(autoincrement())
   nombre_categoria String
-  descripcion    String?
-  videos         Video[]
+  descripcion      String?
+  videos           Video[]
 }
