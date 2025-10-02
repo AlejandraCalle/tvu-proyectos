@@ -25,10 +25,10 @@ model Usuario {
 }
 
 model Rol {
-  id_rol                 Int     @id @default(autoincrement())
+  id_rol                 Int                    @id @default(autoincrement())
   nombre_rol             String
   descripcion            String?
-  estado                 Boolean @default(true)
+  estado                 Boolean                @default(true)
   usuarios               Usuario[]
   asignacionesRolPermiso AsignacionRolPermiso[]
   rolPermisos            Rol_Permiso[]
@@ -59,11 +59,10 @@ model AsignacionRolPermiso {
   fecha_asignacion DateTime @default(now())
   accion           String   @db.VarChar(10) // ASIGNAR o QUITAR
 
-  rol      Rol      @relation(fields: [id_rol], references: [id_rol])
-  permiso  Permiso  @relation(fields: [id_permiso], references: [id_permiso])
-  usuario  Usuario  @relation(fields: [asignado_por], references: [id_usuario])
+  rol     Rol     @relation(fields: [id_rol], references: [id_rol])
+  permiso Permiso @relation(fields: [id_permiso], references: [id_permiso])
+  usuario Usuario @relation(fields: [asignado_por], references: [id_usuario])
 }
-
 
 model RegistroAcciones {
   id_accion        Int        @id @default(autoincrement())
@@ -105,6 +104,7 @@ model TipoCambio {
 model Etiqueta {
   id_etiqueta     Int                       @id @default(autoincrement())
   nombre_etiqueta String
+  estado          Boolean                   @default(true)
   asignaciones    AsignacionVideoEtiqueta[]
   videoEtiquetas  Video_Etiqueta[]
 }
@@ -157,6 +157,7 @@ model Productor {
 model Categoria {
   id_categoria     Int     @id @default(autoincrement())
   nombre_categoria String
+  estado           Boolean @default(true)
   descripcion      String?
   videos           Video[]
 }

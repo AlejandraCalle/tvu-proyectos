@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, ParseIntP
 import { CategoriasService } from './categorias.service';
 import { CreateCategoriaDto } from './dto/create-categoria.dto';
 import { UpdateCategoriaDto } from './dto/update-categoria.dto';
-import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermisosGuard } from 'src/auth/permisos.guard';
 import { Permisos } from 'src/auth/permisos.decorator';
 
@@ -10,7 +10,7 @@ import { Permisos } from 'src/auth/permisos.decorator';
 export class CategoriasController {
     constructor(private readonly categoriasService: CategoriasService) { }
 
-    @UseGuards(AuthGuard('jwt'), PermisosGuard)
+    @UseGuards(JwtAuthGuard, PermisosGuard)
     @Permisos('CREAR_CATEGORIA')
     @Post()
     create(@Body() dto: CreateCategoriaDto, @Req() req: any) {
@@ -27,7 +27,7 @@ export class CategoriasController {
         return this.categoriasService.findOne(id);
     }
 
-    @UseGuards(AuthGuard('jwt'), PermisosGuard)
+    @UseGuards(JwtAuthGuard, PermisosGuard)
     @Permisos('ACTUALIZAR_CATEGORIA')
     @Patch(':id')
     update(
@@ -38,10 +38,25 @@ export class CategoriasController {
         return this.categoriasService.update(id, dto, req.user.id_usuario);
     }
 
-    @UseGuards(AuthGuard('jwt'), PermisosGuard)
+    @UseGuards(JwtAuthGuard, PermisosGuard)
     @Permisos('ELIMINAR_CATEGORIA')
     @Delete(':id')
     remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
         return this.categoriasService.remove(id, req.user.id_usuario);
     }
+
+    @UseGuards(JwtAuthGuard, PermisosGuard)
+    @Permisos('ELIMINAR_CATEGORIA')
+    @Patch(':id/soft-delete')
+    softDelete(@Param('id') id: number, @Req() req: any) {
+        return this.categoriasService.softDelete(id, req.user.id_usuario);
+    }
+
+    @UseGuards(JwtAuthGuard, PermisosGuard)
+    @Permisos('ELIMINAR_CATEGORIA')
+    @Delete(':id/hard-delete')
+    hardDelete(@Param('id') id: number, @Req() req: any) {
+        return this.categoriasService.hardDelete(id, req.user.id_usuario);
+    }
+
 }

@@ -5,7 +5,7 @@ import { UpdateEtiquetaDto } from './dto/update-etiqueta.dto';
 
 @Injectable()
 export class EtiquetasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // Crear etiqueta
   async create(createEtiquetaDto: CreateEtiquetaDto, id_usuario: number) {
@@ -88,4 +88,43 @@ export class EtiquetasService {
 
     return eliminada;
   }
+
+  async softDelete(id: number, id_usuario: number) {
+    const etiquetaExistente = await this.prisma.etiqueta.findUnique({ where: { id_etiqueta: id } });
+    if (!etiquetaExistente) throw new NotFoundException('Etiqueta no encontrada');
+    const eliminada = await this.prisma.etiqueta.update({
+      where: { id_etiqueta: id },
+      data: { estado: false },
+    });
+    await this.prisma.registroAcciones.create({
+      data: {
+        id_usuario,
+        id_tipo_accion: 7, // ELIMINAR_ETIQUETA
+        entidad_afectada: 'Etiqueta',
+        id_entidad: id,
+        fecha_accion: new Date(),
+      },
+    });
+    return eliminada;
+  }
+
+  async hardDelete(id: number, id_usuario: number) {
+    const etiquetaExistente = await this.prisma.etiqueta.findUnique({ where: { id_etiqueta: id } });
+    if (!etiquetaExistente) throw new NotFoundException('Etiqueta no encontrada');
+    
+    await this.prisma.registroAcciones.deleteMany({ where: { id_entidad: id, entidad_afectada: 'Etiqueta' } });
+    await this.prisma.etiqueta.deleteMany({ where: { id_etiqueta: id } });
+
+    await this.prisma.registroAcciones.create({
+      data: {
+        id_usuario,
+        id_tipo_accion: 7, // ELIMINAR_ETIQUETA
+        entidad_afectada: 'Etiqueta',
+        id_entidad: id,
+        fecha_accion: new Date(),
+      },
+    });
+    return { message: 'Etiqueta eliminada exitosamente' };
+  }
+
 }

@@ -61,7 +61,7 @@ export class CategoriasService {
     await this.prisma.registroAcciones.create({
       data: {
         id_usuario,
-        id_tipo_accion: 8, // ACTUALIZAR_CATEGORIA (agregar al seed)
+        id_tipo_accion: 9, // ACTUALIZAR_CATEGORIA (agregar al seed)
         entidad_afectada: 'Categoria',
         id_entidad: id,
         fecha_accion: new Date(),
@@ -89,5 +89,44 @@ export class CategoriasService {
     });
 
     return eliminada;
+  }
+
+  async softDelete(id: number, id_usuario: number) {
+    const categoriaExistente = await this.prisma.categoria.findUnique({ where: { id_categoria: id } });
+    if (!categoriaExistente) throw new NotFoundException('Categoría no encontrada');
+    const eliminada = await this.prisma.categoria.update({
+      where: { id_categoria: id },
+      data: { estado: false },
+    });
+    await this.prisma.registroAcciones.create({
+      data: {
+        id_usuario,
+        id_tipo_accion: 10, // ELIMINAR_CATEGORIA (agregar al seed)
+        entidad_afectada: 'Categoria',
+        id_entidad: id,
+        fecha_accion: new Date(),
+      },
+    });
+    return eliminada;
+  }
+
+  async hardDelete(id: number, id_usuario: number) {
+    const categoriaExistente = await this.prisma.categoria.findUnique({ where: { id_categoria: id } });
+    if (!categoriaExistente) throw new NotFoundException('Categoría no encontrada');
+
+    await this.prisma.registroAcciones.deleteMany({ where: { id_entidad: id, entidad_afectada: 'Categoria' } });
+    await this.prisma.categoria.deleteMany({ where: { id_categoria: id } });
+
+    await this.prisma.registroAcciones.create({
+      data: {
+        id_usuario,
+        id_tipo_accion: 10, // ELIMINAR_CATEGORIA (agregar al seed)
+        entidad_afectada: 'Categoria',
+        id_entidad: id,
+        fecha_accion: new Date(),
+      },
+    });
+
+    return {message: 'Categoría eliminada exitosamente'};
   }
 }
