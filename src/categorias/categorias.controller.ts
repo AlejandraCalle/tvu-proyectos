@@ -40,13 +40,6 @@ export class CategoriasController {
 
     @UseGuards(JwtAuthGuard, PermisosGuard)
     @Permisos('ELIMINAR_CATEGORIA')
-    @Delete(':id')
-    remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-        return this.categoriasService.remove(id, req.user.id_usuario);
-    }
-
-    @UseGuards(JwtAuthGuard, PermisosGuard)
-    @Permisos('ELIMINAR_CATEGORIA')
     @Patch(':id/soft-delete')
     softDelete(@Param('id') id: number, @Req() req: any) {
         return this.categoriasService.softDelete(id, req.user.id_usuario);

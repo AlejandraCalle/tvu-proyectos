@@ -110,15 +110,15 @@ model Etiqueta {
 }
 
 model AsignacionVideoEtiqueta {
+  id_asignacion    Int      @id @default(autoincrement())
   id_video         Int
   id_etiqueta      Int
   fecha_asignacion DateTime
   asignado_por     Int
+  accion           String   @db.VarChar(10) // ASIGNAR o QUITAR
   video            Video    @relation(fields: [id_video], references: [id_video])
   etiqueta         Etiqueta @relation(fields: [id_etiqueta], references: [id_etiqueta])
   asignador        Usuario  @relation(fields: [asignado_por], references: [id_usuario])
-
-  @@id([id_video, id_etiqueta, asignado_por])
 }
 
 model Video_Etiqueta {
@@ -139,6 +139,7 @@ model Video {
   fecha_creación  DateTime                  @default(now())
   id_productor     Int
   id_categoria     Int
+  estado           Boolean                   @default(true)
   productor        Productor                 @relation(fields: [id_productor], references: [id_productor])
   categoria        Categoria                 @relation(fields: [id_categoria], references: [id_categoria])
   historialCambios HistorialCambios[]
@@ -150,6 +151,7 @@ model Productor {
   id_productor     Int       @id @default(autoincrement())
   nombre_productor String
   contacto         String?
+  estado           Boolean   @default(true)
   videos           Video[]
   usuarios         Usuario[] @relation("UsuarioProductor")
 }

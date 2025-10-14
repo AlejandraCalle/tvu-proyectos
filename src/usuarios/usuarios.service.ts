@@ -191,8 +191,6 @@ export class UsuariosService {
   // Eliminar usuario con registro de acción
   // Hard delete: elimina completamente el usuario
   async hardDelete(id: number, id_actor: number) {
-    const usuario = await this.prisma.usuario.findUnique({ where: { id_usuario: id } })
-
     await this.prisma.registroAcciones.deleteMany({ where: { id_usuario: id } });
     await this.prisma.registroAcciones.deleteMany({ where: { id_entidad: id } });
     await this.prisma.historialCambios.deleteMany({ where: { id_usuario: id } });

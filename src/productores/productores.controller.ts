@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, Put, Delete, ParseIntPipe, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Put, Delete, ParseIntPipe, UseGuards, Req, Patch } from '@nestjs/common';
 import { ProductoresService } from './productores.service';
 import { CreateProductorDto } from './dto/create-productor.dto';
 import { UpdateProductorDto } from './dto/update-productor.dto';
@@ -23,7 +23,6 @@ export class ProductoresController {
         return this.service.findAll();
     }
 
-
     @Get(':id')
     findOne(@Param('id', ParseIntPipe) id: number) {
         return this.service.findOne(id);
@@ -38,8 +37,15 @@ export class ProductoresController {
 
     @UseGuards(JwtAuthGuard, PermisosGuard)
     @Permisos('ELIMINAR_PRODUCTOR')
-    @Delete(':id')
-    remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-        return this.service.remove(id, req.user.id_usuario);
+    @Patch(':id/soft-delete')
+    softDelete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+        return this.service.softDelete(id, req.user.id_usuario);
+    }
+
+    @UseGuards(JwtAuthGuard, PermisosGuard)
+    @Permisos('ELIMINAR_PRODUCTOR')
+    @Delete(':id/hard-delete')
+    hardDelete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+        return this.service.hardDelete(id, req.user.id_usuario);
     }
 }

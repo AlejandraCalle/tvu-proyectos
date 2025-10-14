@@ -71,26 +71,7 @@ export class CategoriasService {
     return categoriaActualizada;
   }
 
-  // Eliminar categoría con registro de acción
-  async remove(id: number, id_usuario: number) {
-    const categoriaExistente = await this.prisma.categoria.findUnique({ where: { id_categoria: id } });
-    if (!categoriaExistente) throw new NotFoundException('Categoría no encontrada');
-
-    const eliminada = await this.prisma.categoria.delete({ where: { id_categoria: id } });
-
-    await this.prisma.registroAcciones.create({
-      data: {
-        id_usuario,
-        id_tipo_accion: 10, // ELIMINAR_CATEGORIA (agregar al seed)
-        entidad_afectada: 'Categoria',
-        id_entidad: id,
-        fecha_accion: new Date(),
-      },
-    });
-
-    return eliminada;
-  }
-
+  
   async softDelete(id: number, id_usuario: number) {
     const categoriaExistente = await this.prisma.categoria.findUnique({ where: { id_categoria: id } });
     if (!categoriaExistente) throw new NotFoundException('Categoría no encontrada');

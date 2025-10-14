@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsBoolean } from 'class-validator';
 
 
 export class CreateProductorDto {
@@ -11,4 +11,8 @@ export class CreateProductorDto {
     @IsString()
     @MaxLength(150)
     contacto?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    estado?: boolean = true;
 }

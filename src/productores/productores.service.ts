@@ -34,8 +34,8 @@ export class ProductoresService {
         const productorExistente = await this.prisma.productor.findUnique({ where: { id_productor: id } });
         if (!productorExistente) throw new NotFoundException('Productor no encontrado');
 
-        const productorActualizado= await this.prisma.productor.update({
-            where: {id_productor: id },
+        const productorActualizado = await this.prisma.productor.update({
+            where: { id_productor: id },
             data: updateProductorDto,
         });
 
@@ -45,18 +45,38 @@ export class ProductoresService {
             entidad_afectada: 'Productor',
             id_entidad: id,
         });
+
+        return productorActualizado;
     }
 
 
-    async remove(id: number, actorId: number) {
-        const videosAsociados = await this.prisma.video.count({ where: { id_productor: id },});
-        if (videosAsociados > 0) throw new BadRequestException( `No se puede eliminar: tiene ${videosAsociados} video(s) asociados.`);
-        const eliminado = await this.prisma.productor.delete({ where: { id_productor: id } });
+    async softDelete(id: number, actorId: number) {
+        const productorInactivo = await this.prisma.productor.update({
+            where: { id_productor: id },
+            data: { estado: false },
+        });
+
         await this.auditoria.registrarAccion({
             id_usuario: actorId,
-            id_tipo_accion: 19, // ELIMINAR_PRODUCTOR (agregar al seed)
+            id_tipo_accion: 19,
             entidad_afectada: 'Productor',
             id_entidad: id,
         });
+        return productorInactivo;
     }
+
+    async hardDelete(id: number, actorId: number) {
+        await this.prisma.registroAcciones.deleteMany({ where: { entidad_afectada: 'Productor', id_entidad: id } });
+        await this.prisma.productor.delete({ where: { id_productor: id } });
+
+        await this.auditoria.registrarAccion({
+            id_usuario: actorId,
+            id_tipo_accion: 19,
+            entidad_afectada: 'Productor',
+            id_entidad: id,
+        });
+        return { message: 'Productor eliminado permanentemente' };
+    }
+
+
 }

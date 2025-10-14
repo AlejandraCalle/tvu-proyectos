@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, UseGuards, Req, Put } from '@nestjs/common';
 import { VideosService } from './videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
@@ -43,23 +43,42 @@ export class VideosController {
 
   @UseGuards(JwtAuthGuard, PermisosGuard)
   @Permisos('ELIMINAR_VIDEO')
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.videosService.remove(id, req.user.id_usuario);
+  @Patch(':id/soft-delete')
+  sofDelete(@Param ('id') id:number, @Req() req){
+    return this.videosService.softDelete(Number(id),req.user.id_usuario)
+  }
+
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('ELIMINAR_VIDEO')
+  @Delete(':id/hard-delete')
+  hardDelete(@Param ('id') id:number, @Req() req){
+    return this.videosService.hardDelete(Number(id),req.user.id_usuario)
+  }
+
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('LISTAR_ROLES')
+  @Get('/permisos/all')
+  getAllPermisos() {
+    return this.videosService.findAllEtiquetas();
+  }
+
+  //Controlar el asignar y desasignar etiquetas a videos
+  @UseGuards(JwtAuthGuard, PermisosGuard)
+  @Permisos('CONTROLAR_ETIQUETAS')
+  @Put(':id/etiquetas')
+  async updateEtiquetas(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() etiquetasDto: { etiquetas: number[] },
+    @Req() req: any
+  ) {
+    return this.videosService.updateEtiquetas(id, etiquetasDto.etiquetas, req.user.id_usuario);
   }
 
   @UseGuards(JwtAuthGuard, PermisosGuard)
   @Permisos('CONTROLAR_ETIQUETAS')
-  @Post('assign-tags')
-  assignTags(@Body() assignTagsDto: AssignEtiquetasDto, @Req() req: any) {
-    return this.videosService.assignTags(assignTagsDto, req.user.id_usuario);
-  }
-
-  @UseGuards(JwtAuthGuard,PermisosGuard)
-  @Permisos('CONTROLAR_ETIQUETAS')
-  @Post('unassign-tags')
-  unassignTags(@Body() unassignTagsDto: UnassignEtiquetasDto, @Req() req: any) {
-    return this.videosService.unassignTags(unassignTagsDto, req.user.id_usuario);
+  @Get(':id/etiquetas')
+  getEtiquetasByVideo(@Param('id', ParseIntPipe) id: number) {
+    return this.videosService.finEtiquetasByVideo(id);
   }
 
 }

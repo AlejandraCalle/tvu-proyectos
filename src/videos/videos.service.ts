@@ -1,9 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
-import { AssignEtiquetasDto } from './dto/assign-etiquetas.dto';
-import { UnassignEtiquetasDto } from './dto/unassign-etiquetas.dto';
 import { AuditoriaService } from 'src/auditoria/auditoria.service';
 
 @Injectable()
@@ -11,18 +9,42 @@ export class VideosService {
   constructor(private prisma: PrismaService, private readonly auditoria: AuditoriaService) { }
 
   // Generar código único TVU-AAAA-MM-DD-CAT
+  // D:\TVU-MediaFinder\src\videos\videos.service.ts
+
   private async generarCodigoUnico(id_categoria: number): Promise<string> {
     const categoria = await this.prisma.categoria.findUnique({ where: { id_categoria } });
     if (!categoria) throw new NotFoundException('Categoría no encontrada');
 
     const inicialCategoria = categoria.nombre_categoria.charAt(0).toUpperCase();
 
+    // 1. Crear el prefijo de fecha (YYYYMMDD)
     const fecha = new Date();
     const año = fecha.getFullYear();
     const mes = String(fecha.getMonth() + 1).padStart(2, '0');
     const dia = String(fecha.getDate()).padStart(2, '0');
+    const fechaFormateada = `${año}${mes}${dia}`;
 
-    return `TVU-${año}${mes}${dia}-${inicialCategoria}`;
+    // 2. Definir el prefijo base del código único
+    const prefijoBase = `TVU-${fechaFormateada}-${inicialCategoria}`;
+
+    // 3. Contar cuántos videos ya existen con este prefijo (para obtener el sufijo consecutivo)
+    const count = await this.prisma.video.count({
+      where: {
+        código_único: {
+          startsWith: prefijoBase,
+        },
+      },
+    });
+
+    // 4. Calcular el siguiente número consecutivo
+    const siguienteConsecutivo = count + 1;
+
+    // 5. Formatear el sufijo (añadir ceros a la izquierda, ej: 1 -> 001)
+    // Usaremos 3 dígitos para el consecutivo (hasta 999 videos por día por categoría)
+    const sufijo = String(siguienteConsecutivo).padStart(3, '0');
+
+    // 6. Devolver el código único final
+    return `${prefijoBase}-${sufijo}`;
   }
 
   // Crear video
@@ -42,10 +64,10 @@ export class VideosService {
 
     // Registro de acción global
     await this.auditoria.registrarAccion({
-        id_usuario: id_actor,
-        id_tipo_accion: 11, // CREAR_VIDEO (agregar en tu seed si no está)
-        entidad_afectada: 'Video',
-        id_entidad: nuevoVideo.id_video,
+      id_usuario: id_actor,
+      id_tipo_accion: 11, // CREAR_VIDEO (agregar en tu seed si no está)
+      entidad_afectada: 'Video',
+      id_entidad: nuevoVideo.id_video,
     });
 
     return nuevoVideo;
@@ -72,6 +94,12 @@ export class VideosService {
     }));
   }
 
+  async findAllEtiquetas() {
+    return this.prisma.etiqueta.findMany({
+      orderBy: { nombre_etiqueta: 'asc' }
+    })
+  }
+
   // Obtener un video por ID
   async findOne(id: number) {
     const video = await this.prisma.video.findUnique({
@@ -84,7 +112,6 @@ export class VideosService {
     });
 
     if (!video) throw new NotFoundException('Video no encontrado');
-
     return {
       ...video,
       fecha_creación: this.convertirFechaLocal(video.fecha_creación),
@@ -100,6 +127,10 @@ export class VideosService {
       include: { categoria: true, productor: true },
     });
     if (!videoExistente) throw new NotFoundException('Video no encontrado');
+
+    if (videoExistente.estado === false) {
+      throw new ForbiddenException('No se permite actualizar un video inactivo o eliminado.');
+    }
 
     // Actualizar el video
     const videoActualizado = await this.prisma.video.update({
@@ -152,118 +183,138 @@ export class VideosService {
   }
 
   // Eliminar video
-  async remove(id: number, id_usuario: number) {
-    const videoExistente = await this.prisma.video.findUnique({ where: { id_video: id } });
-    if (!videoExistente) throw new NotFoundException('Video no encontrado');
-
-    const eliminado = await this.prisma.video.delete({ where: { id_video: id } });
-
-    // Registro de acción global
-    await this.prisma.registroAcciones.create({
-      data: {
-        id_usuario,
-        id_tipo_accion: 13, // ELIMINAR_VIDEO (agregar en seed)
-        entidad_afectada: 'Video',
-        id_entidad: id,
-        fecha_accion: new Date(),
-      },
+  async softDelete(idVideo: number, actorId: number) {
+    const videoInactivo = await this.prisma.video.update({
+      where: { id_video: idVideo },
+      data: { estado: false },
     });
 
-    return eliminado;
+    await this.auditoria.registrarAccion({
+      id_usuario: actorId,
+      id_tipo_accion: 13, // ELIMINAR_VIDEO
+      entidad_afectada: 'Video',
+      id_entidad: idVideo,
+    });
+  }
+
+  async hardDelete(idVideo: number, id_actor: number) {
+    await this.prisma.registroAcciones.deleteMany({ where: { entidad_afectada: 'Video', id_entidad: idVideo } });
+    await this.prisma.historialCambios.deleteMany({ where: { id_video: idVideo } });
+    await this.prisma.asignacionVideoEtiqueta.deleteMany({ where: { id_video: idVideo } });
+    await this.prisma.video_Etiqueta.deleteMany({ where: { id_video: idVideo } })
+
+    await this.prisma.video.delete({ where: { id_video: idVideo } });
+
+    await this.auditoria.registrarAccion({
+      id_usuario: id_actor,
+      id_tipo_accion: 13, // ELIMINAR_USUARIO
+      entidad_afectada: 'Video',
+      id_entidad: idVideo,
+    });
+
+    return { message: 'Usuario eliminado permanentemente' };
   }
 
   // Asignar etiquetas a un video
-  async assignTags(assignTagsDto: AssignEtiquetasDto, id_usuario: number) {
-    const { id_video, ids_etiquetas } = assignTagsDto;
-
-    const asignaciones = await Promise.all(
-      ids_etiquetas.map((id_etiqueta) =>
-        this.prisma.asignacionVideoEtiqueta.create({
-          data: { id_video, id_etiqueta, asignado_por: id_usuario, fecha_asignacion: new Date() },
-        }),
-      ),
-    );
-
-    // Historial cambio
-    await this.prisma.historialCambios.create({
-      data: {
-        id_video,
-        id_usuario,
-        id_tipo_cambio: 104, // ASIGNAR_ETIQUETA
-        fecha_cambio: new Date(),
-        detalle_cambio: `Etiquetas asignadas: [${ids_etiquetas.join(', ')}]`,
-      },
+  async updateEtiquetas(idVideo: number, nuevasEtiquetas: number[], actorId: number) {
+    const videoExistente = await this.prisma.video.findUnique({
+      where: { id_video: idVideo },
+      select: { estado: true }
     });
 
-    // Registro acción
-    // await this.prisma.registroAcciones.create({
-    //   data: {
-    //     id_usuario,
-    //     id_tipo_accion: 3, // ASIGNAR_ETIQUETA_A_VIDEO
-    //     entidad_afectada: 'Video',
-    //     id_entidad: id_video,
-    //     fecha_accion: new Date(),
-    //   },
-    // });
+    if (!videoExistente) {
+      throw new NotFoundException('Video no encontrado');
+    }
 
-    //Tener la ultima asignacion
-    await Promise.all(
-      ids_etiquetas.map((id_etiqueta) =>
-        this.prisma.video_Etiqueta.upsert({
-          where: {
-            id_video_id_etiqueta: { id_video, id_etiqueta },
-          },
-          update: {}, // Si ya existe, no hacemos nada
-          create: { id_video, id_etiqueta,fecha_asignacion:new Date() }, // Crea la relación
-        }),
-      ),
-    );
+    if (videoExistente.estado === false) {
+    }
 
+    // 1. Obtener las etiquetas actuales del video
+    const actuales = await this.prisma.video_Etiqueta.findMany({
+      where: { id_video: idVideo },
+      select: { id_etiqueta: true }
+    });
+    const etiquetasOriginales = actuales.map(e => e.id_etiqueta);
+    // 2. Calcular diferencias
+    const etiquetasAgregar = nuevasEtiquetas.filter(e => !etiquetasOriginales.includes(e));
+    const etiquetasQuitar = etiquetasOriginales.filter(e => !nuevasEtiquetas.includes(e));
+    const fecha = new Date();
+    // 3. Agregar nuevas etiquetas
+    if (etiquetasAgregar.length > 0) {
+      await this.prisma.video_Etiqueta.createMany({
+        data: etiquetasAgregar.map(idEtiqueta => ({
+          id_video: idVideo,
+          id_etiqueta: idEtiqueta,
+          fecha_asignacion: new Date(),
+        }))
+      });
+      // Auditoría → registro en AsignacionVideoEtiqueta
+      for (const idEtiqueta of etiquetasAgregar) {
+        await this.prisma.asignacionVideoEtiqueta.create({
+          data: {
+            id_video: idVideo,
+            id_etiqueta: idEtiqueta,
+            asignado_por: actorId,
+            fecha_asignacion: fecha,
+            accion: 'ASIGNAR'
+          }
+        });
+      }
 
-    return asignaciones;
+      await this.prisma.historialCambios.create({
+        data: {
+          id_video: idVideo,
+          id_usuario: actorId,
+          id_tipo_cambio: 104, // ASIGNAR_ETIQUETA
+          fecha_cambio: new Date(),
+          detalle_cambio: `Etiquetas asignadas: [${etiquetasAgregar.join(', ')}]`,
+        },
+      });
+
+    }
+    // 4. Quitar etiquetas
+    if (etiquetasQuitar.length > 0) {
+      await this.prisma.video_Etiqueta.deleteMany({
+        where: {
+          id_video: idVideo,
+          id_etiqueta: { in: etiquetasQuitar }
+        }
+      });
+      // Auditoría → registro también en AsignacionVideoEtiqueta
+      for (const idEtiqueta of etiquetasQuitar) {
+        await this.prisma.asignacionVideoEtiqueta.create({
+          data: {
+            id_video: idVideo,
+            id_etiqueta: idEtiqueta,
+            asignado_por: actorId,
+            fecha_asignacion: fecha,
+            accion: 'QUITAR'
+          }
+        });
+      }
+      await this.prisma.historialCambios.create({
+        data: {
+          id_video: idVideo,
+          id_usuario: actorId,
+          id_tipo_cambio: 105, // REMOVER_ETIQUETA
+          fecha_cambio: new Date(),
+          detalle_cambio: `Etiquetas removidas: [${etiquetasQuitar.join(', ')}]`,
+        },
+      });
+    }
+    return { mensaje: 'Etiquetas actualizadas correctamente' };
   }
 
-  async unassignTags(unassignTagsDto: UnassignEtiquetasDto, id_usuario: number) {
-    const { id_video, ids_etiquetas } = unassignTagsDto;
-
-    const desasignaciones = await Promise.all(
-      ids_etiquetas.map((id_etiqueta) =>
-        this.prisma.asignacionVideoEtiqueta.delete({
-          where: { id_video_id_etiqueta_asignado_por: { id_video, id_etiqueta, asignado_por: id_usuario } },
-        }),
-      ),
-    );
-
-    // Historial cambio
-    await this.prisma.historialCambios.create({
-      data: {
-        id_video,
-        id_usuario,
-        id_tipo_cambio: 105, // REMOVER_ETIQUETA
-        fecha_cambio: new Date(),
-        detalle_cambio: `Etiquetas removidas: [${ids_etiquetas.join(', ')}]`,
+  async finEtiquetasByVideo(id_video: number) {
+    const video = await this.prisma.video.findUnique({
+      where: { id_video },
+      include: {
+        videoEtiquetas: {
+          include: { etiqueta: true },
+        },
       },
     });
-
-    // Registro acción
-    // await this.prisma.registroAcciones.create({
-    //   data: {
-    //     id_usuario,
-    //     id_tipo_accion: 8, // REMOVER_ETIQUETA_VIDEO (agregar en seed)
-    //     entidad_afectada: 'Video',
-    //     id_entidad: id_video,
-    //     fecha_accion: new Date(),
-    //   },
-    // });
-
-    //Tener la ultima asignacion
-    await Promise.all(
-      ids_etiquetas.map((id_etiqueta) =>
-        this.prisma.video_Etiqueta.delete({
-          where: { id_video_id_etiqueta: { id_video, id_etiqueta } },
-        }),
-      ),
-    );
-    return desasignaciones;
+    if (!video) return [];
+    return video.videoEtiquetas.map((ve) => ve.etiqueta);
   }
 }
