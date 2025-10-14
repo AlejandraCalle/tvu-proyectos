@@ -4,7 +4,7 @@ import { SearchVideoDto } from './dto/search-video.dto';
 
 @Injectable()
 export class BusquedaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // 📌 UTILIDADES DE FECHA
   private ajustarFechaInicio(fecha: Date): Date {
@@ -62,4 +62,52 @@ export class BusquedaService {
       throw new InternalServerErrorException('Error al ejecutar la búsqueda, intenta nuevamente.');
     }
   }
+
+
+  // 🔍 BÚSQUEDA PROFUNDA (global)
+async busquedaProfunda(termino: string) {
+  if (!termino || termino.trim() === '') {
+    throw new BadRequestException('Debe proporcionar un término de búsqueda.');
+  }
+
+  try {
+    const resultados = await this.prisma.video.findMany({
+      where: {
+        OR: [
+          { titulo: { contains: termino, mode: 'insensitive' } },
+          { descripcion: { contains: termino, mode: 'insensitive' } },
+          {
+            categoria: {
+              nombre_categoria: { contains: termino, mode: 'insensitive' },
+            },
+          },
+          {
+            productor: {
+              nombre_productor: { contains: termino, mode: 'insensitive' },
+            },
+          },
+          {
+            videoEtiquetas: {
+              some: {
+                etiqueta: { nombre_etiqueta: { contains: termino, mode: 'insensitive' } },
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        categoria: true,
+        productor: true,
+        videoEtiquetas: { include: { etiqueta: true } },
+      },
+    });
+
+    return resultados.length > 0 ? resultados : [];
+  } catch (error) {
+    console.error('Error en búsqueda profunda:', error);
+    throw new InternalServerErrorException('Error al ejecutar la búsqueda profunda.');
+  }
+}
+
+
 }
