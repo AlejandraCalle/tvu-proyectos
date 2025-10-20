@@ -9,9 +9,10 @@ import { EtiquetasModule } from './etiquetas/etiquetas.module';
 import { BusquedaModule } from './busqueda/busqueda.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
 import { ProductoresModule } from './productores/productores.module';
+import { RecomendacionesModule } from './recomendaciones/recomendaciones.module';
 
 @Module({
-  imports: [AuthModule, UsuariosModule, RolesModule, PrismaModule, VideosModule, CategoriasModule, EtiquetasModule, BusquedaModule, AuditoriaModule, ProductoresModule],
+  imports: [AuthModule, UsuariosModule, RolesModule, PrismaModule, VideosModule, CategoriasModule, EtiquetasModule, BusquedaModule, AuditoriaModule, ProductoresModule, RecomendacionesModule],
   controllers: [],
   providers: [],
 })
