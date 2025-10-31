@@ -54,26 +54,49 @@ export class AuditoriaService {
 
   // ---------- Consultas ----------
   async listarAcciones(q: QueryAccionesDto) {
+    console.log('🔍 Service - Query recibida:', q);
+    
     const where: any = { AND: [] as any[] };
 
-    if (q.id_usuario) where.AND.push({ id_usuario: q.id_usuario });
-    if (q.id_tipo_accion) where.AND.push({ id_tipo_accion: q.id_tipo_accion });
-    if (q.id_entidad) where.AND.push({ id_entidad: q.id_entidad });
+    if (q.id_usuario) {
+      where.AND.push({ id_usuario: q.id_usuario });
+      console.log('  ✓ Filtro id_usuario:', q.id_usuario);
+    }
+    if (q.id_tipo_accion) {
+      where.AND.push({ id_tipo_accion: q.id_tipo_accion });
+      console.log('  ✓ Filtro id_tipo_accion:', q.id_tipo_accion);
+    }
+    if (q.id_entidad) {
+      where.AND.push({ id_entidad: q.id_entidad });
+      console.log('  ✓ Filtro id_entidad:', q.id_entidad);
+    }
     if (q.entidad_afectada) {
       where.AND.push({
         entidad_afectada: { contains: q.entidad_afectada, mode: 'insensitive' },
       });
+      console.log('  ✓ Filtro entidad_afectada:', q.entidad_afectada);
     }
     if (q.fechaInicio) {
-      where.AND.push({ fecha_accion: { gte: startOfDay(q.fechaInicio) } });
+      const fecha = startOfDay(q.fechaInicio);
+      where.AND.push({ fecha_accion: { gte: fecha } });
+      console.log('  ✓ Filtro fechaInicio:', fecha);
     }
     if (q.fechaFin) {
-      where.AND.push({ fecha_accion: { lte: endOfDayInclusive(q.fechaFin) } });
+      const fecha = endOfDayInclusive(q.fechaFin);
+      where.AND.push({ fecha_accion: { lte: fecha } });
+      console.log('  ✓ Filtro fechaFin:', fecha);
     }
-    if (!where.AND.length) delete where.AND;
+    
+    if (!where.AND.length) {
+      delete where.AND;
+      console.log('  ℹ️ Sin filtros, buscando todo');
+    }
+
+    console.log('📊 Where final:', JSON.stringify(where, null, 2));
 
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 10;
+    
     const [items, total] = await Promise.all([
       this.prisma.registroAcciones.findMany({
         where,
@@ -88,6 +111,8 @@ export class AuditoriaService {
       this.prisma.registroAcciones.count({ where }),
     ]);
 
+    console.log('✅ Service - Resultados:', { total, items: items.length });
+
     return {
       page,
       pageSize,
@@ -97,26 +122,49 @@ export class AuditoriaService {
   }
 
   async listarCambios(q: QueryCambiosDto) {
+    console.log('🔍 Service - Query cambios recibida:', q);
+    
     const where: any = { AND: [] as any[] };
 
-    if (q.id_video) where.AND.push({ id_video: q.id_video });
-    if (q.id_usuario) where.AND.push({ id_usuario: q.id_usuario });
-    if (q.id_tipo_cambio) where.AND.push({ id_tipo_cambio: q.id_tipo_cambio });
+    if (q.id_video) {
+      where.AND.push({ id_video: q.id_video });
+      console.log('  ✓ Filtro id_video:', q.id_video);
+    }
+    if (q.id_usuario) {
+      where.AND.push({ id_usuario: q.id_usuario });
+      console.log('  ✓ Filtro id_usuario:', q.id_usuario);
+    }
+    if (q.id_tipo_cambio) {
+      where.AND.push({ id_tipo_cambio: q.id_tipo_cambio });
+      console.log('  ✓ Filtro id_tipo_cambio:', q.id_tipo_cambio);
+    }
     if (q.buscar) {
       where.AND.push({
         detalle_cambio: { contains: q.buscar, mode: 'insensitive' },
       });
+      console.log('  ✓ Filtro buscar:', q.buscar);
     }
     if (q.fechaInicio) {
-      where.AND.push({ fecha_cambio: { gte: startOfDay(q.fechaInicio) } });
+      const fecha = startOfDay(q.fechaInicio);
+      where.AND.push({ fecha_cambio: { gte: fecha } });
+      console.log('  ✓ Filtro fechaInicio:', fecha);
     }
     if (q.fechaFin) {
-      where.AND.push({ fecha_cambio: { lte: endOfDayInclusive(q.fechaFin) } });
+      const fecha = endOfDayInclusive(q.fechaFin);
+      where.AND.push({ fecha_cambio: { lte: fecha } });
+      console.log('  ✓ Filtro fechaFin:', fecha);
     }
-    if (!where.AND.length) delete where.AND;
+    
+    if (!where.AND.length) {
+      delete where.AND;
+      console.log('  ℹ️ Sin filtros, buscando todo');
+    }
+
+    console.log('📊 Where final:', JSON.stringify(where, null, 2));
 
     const page = q.page ?? 1;
     const pageSize = q.pageSize ?? 10;
+    
     const [items, total] = await Promise.all([
       this.prisma.historialCambios.findMany({
         where,
@@ -131,6 +179,8 @@ export class AuditoriaService {
       }),
       this.prisma.historialCambios.count({ where }),
     ]);
+
+    console.log('✅ Service - Resultados cambios:', { total, items: items.length });
 
     return {
       page,

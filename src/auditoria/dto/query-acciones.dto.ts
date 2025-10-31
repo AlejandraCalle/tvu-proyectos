@@ -1,22 +1,32 @@
 import { IsInt, IsOptional, IsString, IsDateString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PaginationDto } from './pagination.dto';
 
 export class QueryAccionesDto extends PaginationDto {
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   id_usuario?: number;
 
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   id_tipo_accion?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   entidad_afectada?: string; // admite parcial
 
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   id_entidad?: number;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   fechaInicio?: string; // YYYY-MM-DD
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   fechaFin?: string;    // YYYY-MM-DD
 }

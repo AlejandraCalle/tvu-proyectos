@@ -1,22 +1,35 @@
 import { IsInt, IsOptional, IsString, IsDateString } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { PaginationDto } from './pagination.dto';
 
 export class QueryCambiosDto extends PaginationDto {
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Type(() => Number)
+  @IsInt()
   id_video?: number;
 
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Type(() => Number)
+  @IsInt()
   id_usuario?: number;
 
-  @IsOptional() @IsInt()
+  @IsOptional()
+  @Transform(({ value }) => value ? parseInt(value, 10) : undefined)
+  @Type(() => Number)
+  @IsInt()
   id_tipo_cambio?: number;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   buscar?: string; // busca en detalle_cambio (ilike)
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   fechaInicio?: string;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   fechaFin?: string;
 }
