@@ -26,24 +26,14 @@ export class AuditoriaController {
   @Get('acciones')
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async listarAcciones(@Query() q: QueryAccionesDto) {
-    console.log('🔍 Controller - Recibiendo query para acciones:', q);
     const result = await this.auditoria.listarAcciones(q);
-    console.log('✅ Controller - Resultado acciones:', {
-      total: result.total,
-      items: result.items?.length
-    });
     return result;
   }
 
   @Get('cambios-video')
   @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async listarCambios(@Query() q: QueryCambiosDto) {
-    console.log('🔍 Controller - Recibiendo query para cambios:', q);
     const result = await this.auditoria.listarCambios(q);
-    console.log('✅ Controller - Resultado cambios:', {
-      total: result.total,
-      items: result.items?.length
-    });
     return result;
   }
 
