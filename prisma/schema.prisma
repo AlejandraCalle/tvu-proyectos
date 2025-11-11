@@ -140,6 +140,14 @@ model Video {
   id_productor     Int
   id_categoria     Int
   estado           Boolean                   @default(true)
+  
+  // 🆕 Nuevos campos para almacenar archivos
+  nombre_archivo   String?                   // Nombre original del archivo
+  ruta_archivo     String?                   // Ruta donde se guardó el archivo
+  tamaño_bytes     BigInt?                   // Tamaño del archivo en bytes
+  formato          String?                   // Formato del video (mp4, avi, etc.)
+  duracion_segundos Int?                     // Duración del video en segundos (opcional)
+
   productor        Productor                 @relation(fields: [id_productor], references: [id_productor])
   categoria        Categoria                 @relation(fields: [id_categoria], references: [id_categoria])
   historialCambios HistorialCambios[]

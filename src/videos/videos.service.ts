@@ -1,12 +1,124 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { AuditoriaService } from 'src/auditoria/auditoria.service';
 
+import { createReadStream, existsSync } from 'fs';
+import { join } from 'path';
+import { UPLOAD_DIR } from 'src/config/multer.config';
+
 @Injectable()
 export class VideosService {
   constructor(private prisma: PrismaService, private readonly auditoria: AuditoriaService) { }
+
+  // 🆕 Método para crear video con archivo
+  async createWithFile(
+    createVideoDto: CreateVideoDto,
+    file: Express.Multer.File,
+    id_actor: number
+  ) {
+    const codigoUnico = await this.generarCodigoUnico(createVideoDto.id_categoria);
+
+    // Extraer información del archivo
+    const nombre_archivo = file.originalname;
+    const ruta_archivo = file.filename; // Nombre guardado en disco
+    const tamaño_bytes = BigInt(file.size);
+    const formato = file.mimetype.split('/')[1]; // Extraer extensión del mimetype
+
+    const nuevoVideo = await this.prisma.video.create({
+      data: {
+        código_único: codigoUnico,
+        titulo: createVideoDto.titulo,
+        descripcion: createVideoDto.descripcion,
+        id_productor: createVideoDto.id_productor,
+        id_categoria: createVideoDto.id_categoria,
+        nombre_archivo,
+        ruta_archivo,
+        tamaño_bytes,
+        formato,
+      },
+      include: { productor: true, categoria: true },
+    });
+
+    // Registro de acción global
+    await this.auditoria.registrarAccion({
+      id_usuario: id_actor,
+      id_tipo_accion: 11, // CREAR_VIDEO
+      entidad_afectada: 'Video',
+      id_entidad: nuevoVideo.id_video,
+    });
+
+    return nuevoVideo;
+  }
+
+  // 🆕 Método para descargar archivo de video
+  async downloadVideo(id_video: number): Promise<{ file: StreamableFile; filename: string; mimetype: string }> {
+    // Buscar el video en la base de datos
+    const video = await this.prisma.video.findUnique({
+      where: { id_video },
+      select: {
+        ruta_archivo: true,
+        nombre_archivo: true,
+        formato: true,
+        estado: true,
+      },
+    });
+
+    if (!video) {
+      throw new NotFoundException('Video no encontrado');
+    }
+
+    if (!video.ruta_archivo) {
+      throw new NotFoundException('Este video no tiene un archivo asociado');
+    }
+
+    // Construir ruta completa del archivo
+    const filePath = join(UPLOAD_DIR, video.ruta_archivo);
+
+    // Verificar que el archivo existe
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('El archivo de video no existe en el servidor');
+    }
+
+    // Crear stream del archivo
+    const file = createReadStream(filePath);
+
+    // Determinar mimetype
+    const mimetype = `video/${video.formato || 'mp4'}`;
+
+    return {
+      file: new StreamableFile(file),
+      filename: video.nombre_archivo || 'video.mp4',
+      mimetype,
+    };
+  }
+
+  // 🆕 Obtener información del archivo
+  async getFileInfo(id_video: number) {
+    const video = await this.prisma.video.findUnique({
+      where: { id_video },
+      select: {
+        nombre_archivo: true,
+        tamaño_bytes: true,
+        formato: true,
+        duracion_segundos: true,
+        ruta_archivo: true,
+      },
+    });
+
+    if (!video) {
+      throw new NotFoundException('Video no encontrado');
+    }
+
+    return {
+      nombre_archivo: video.nombre_archivo,
+      tamaño_mb: video.tamaño_bytes ? Number(video.tamaño_bytes) / (1024 * 1024) : null,
+      formato: video.formato,
+      duracion: video.duracion_segundos,
+      tiene_archivo: !!video.ruta_archivo,
+    };
+  }
 
   // Generar código único TVU-AAAA-MM-DD-CAT
   // D:\TVU-MediaFinder\src\videos\videos.service.ts
@@ -90,6 +202,7 @@ export class VideosService {
 
     return videos.map((v) => ({
       ...v,
+      tamaño_bytes: v.tamaño_bytes ? Number(v.tamaño_bytes) : null,
       fecha_creación: this.convertirFechaLocal(v.fecha_creación),
     }));
   }
@@ -114,6 +227,7 @@ export class VideosService {
     if (!video) throw new NotFoundException('Video no encontrado');
     return {
       ...video,
+      tamaño_bytes: video.tamaño_bytes ? Number(video.tamaño_bytes) : null,
       fecha_creación: this.convertirFechaLocal(video.fecha_creación),
     };
   }
